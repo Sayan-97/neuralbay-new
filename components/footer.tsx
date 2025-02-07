@@ -4,7 +4,6 @@ import { Brain } from "lucide-react";
 import { motion } from "framer-motion";
 import AppLogo from "@/public/app-logo.png";
 import Image from "next/image";
-
 export function Footer() {
   return (
     <motion.footer
