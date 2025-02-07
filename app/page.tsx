@@ -12,7 +12,7 @@ import Unleashing from "@/components/containers/unleashing";
 import Distributed from "@/components/containers/distributed";
 import MultiLanguage from "@/components/containers/multi-language";
 import FAQs from "@/components/containers/faqs";
-
+// Home
 export default function HomePage() {
   return (
     <>
