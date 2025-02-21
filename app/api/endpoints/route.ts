@@ -1,4 +1,4 @@
-import { prisma } from "../../../lib/db";
+import { prisma } from "@/lib/db";
 import { ServerError, errorHandler } from "@/lib/utils";
 import { z } from "zod";
 import { NextRequest, NextResponse } from "next/server";

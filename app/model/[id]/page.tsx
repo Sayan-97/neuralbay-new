@@ -6,6 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Star, Download, Share2 } from "lucide-react"
 import Image from "next/image"
 
+export async function generateStaticParams() {
+  // For now, return a static set of IDs to avoid build errors
+  return [
+    { id: '1' },
+    { id: '2' },
+    { id: '3' },
+  ]
+}
+
 export default function ModelPage({ params }: { params: { id: string } }) {
   // In a real application, you would fetch the model data based on the ID
   const model = {
