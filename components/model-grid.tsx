@@ -1,12 +1,21 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Star, ArrowRight } from "lucide-react"
-import Image from "next/image"
-import { motion } from "framer-motion"
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Star, ArrowRight } from "lucide-react";
+import Image from "next/image";
+import { motion } from "framer-motion";
+import { useContext, useState } from "react";
+import { AuthContext } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 const models = [
   {
@@ -42,7 +51,8 @@ const models = [
   {
     id: "4",
     name: "Leonardo AI",
-    description: "AI model specializing in styling images to various art styles as prompted by the user",
+    description:
+      "AI model specializing in styling images to various art styles as prompted by the user",
     category: "Image Generation",
     image: "https://picsum.photos/seed/model4/400/300",
     rating: "4.5k",
@@ -52,7 +62,8 @@ const models = [
   {
     id: "5",
     name: "DALL-E 3",
-    description: "Advanced image generation model with improved coherence and detail",
+    description:
+      "Advanced image generation model with improved coherence and detail",
     category: "Image Generation",
     price: "0.03 ICP / call",
     image: "https://picsum.photos/seed/model5/400/300",
@@ -69,22 +80,49 @@ const models = [
     rating: "4.2k",
     type: "Subscription",
   },
-]
+];
 
-export function ModelGrid({ filters }: { filters: { category: string; price: string; search: string } }) {
+export function ModelGrid({
+  filters,
+  setShowLoginPrompt,
+}: {
+  filters: { category: string; price: string; search: string };
+  setShowLoginPrompt: (value: boolean) => void;
+}) {
+  const authContext = useContext(AuthContext);
+  const router = useRouter();
+
+  const handleCardClick = async (modelId: string) => {
+    if (!authContext || !authContext.principal) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    router.push(`/model/${modelId}`);
+
+    // const hasPurchased = await checkPurchaseStatus(authContext.principal, modelId);
+    // if (hasPurchased) {
+    //     const model = models.find((m) => m.modelId === modelId);
+    //     window.location.href = "https://model-test-chi.vercel.app/";
+    // } else {
+    //     navigate(`/marketplace/${modelId}`);
+    // }
+  };
+
   const filteredModels = models.filter((model) => {
     const categoryMatch =
-      filters.category === "all" || model.category.toLowerCase().includes(filters.category.toLowerCase())
+      filters.category === "all" ||
+      model.category.toLowerCase().includes(filters.category.toLowerCase());
     const priceMatch =
       filters.price === "all" ||
       (filters.price === "free" && model.price === "Free") ||
-      (filters.price === "paid" && model.price !== "Free")
+      (filters.price === "paid" && model.price !== "Free");
     const searchMatch =
       model.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-      model.description.toLowerCase().includes(filters.search.toLowerCase())
+      model.description.toLowerCase().includes(filters.search.toLowerCase());
 
-    return categoryMatch && priceMatch && searchMatch
-  })
+    return categoryMatch && priceMatch && searchMatch;
+  });
 
   return (
     <motion.div
@@ -111,17 +149,26 @@ export function ModelGrid({ filters }: { filters: { category: string; price: str
                   className="transition-transform duration-300 hover:scale-105"
                 />
                 <div className="absolute top-2 right-2">
-                  <Badge variant="secondary" className="bg-secondary text-white">
+                  <Badge
+                    variant="secondary"
+                    className="bg-secondary text-white"
+                  >
                     {model.category}
                   </Badge>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-4">
-              <CardTitle className="text-xl mb-2 text-white">{model.name}</CardTitle>
-              <p className="text-sm text-muted-foreground mb-4">{model.description}</p>
+              <CardTitle className="text-xl mb-2 text-white">
+                {model.name}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mb-4">
+                {model.description}
+              </p>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">{model.price}</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  {model.price}
+                </span>
                 <span className="text-sm text-muted-foreground flex items-center gap-1">
                   <Star className="h-4 w-4 fill-[#ffc107] text-[#ffc107]" />
                   {model.rating}
@@ -129,24 +176,27 @@ export function ModelGrid({ filters }: { filters: { category: string; price: str
               </div>
             </CardContent>
             <CardFooter className="p-4 pt-0 flex justify-between items-center">
-              <Badge variant="outline" className="border-accent-foreground text-muted-foreground">
+              <Badge
+                variant="outline"
+                className="border-accent-foreground text-muted-foreground"
+              >
                 {model.type}
               </Badge>
               <Button
                 asChild
                 variant="ghost"
                 className="font-semibold text-primary hover:text-primary-foreground hover:bg-primary"
+                onClick={() => handleCardClick(model.id)}
               >
-                <Link href={`/model/${model.id}`} className="flex items-center">
+                <span className="flex items-center">
                   View Details
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+                </span>
               </Button>
             </CardFooter>
           </Card>
         </motion.div>
       ))}
     </motion.div>
-  )
+  );
 }
-

@@ -9,7 +9,9 @@ interface AuthContextProps {
   logout: () => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+export const AuthContext = createContext<AuthContextProps | undefined>(
+  undefined
+);
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -18,6 +20,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authClient, setAuthClient] = useState<AuthClient | null>(null);
   const [principal, setPrincipal] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     async function initAuth() {
@@ -28,6 +31,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const identity = client.getIdentity();
         setPrincipal(identity.getPrincipal().toString());
       }
+      setLoading(false);
     }
 
     initAuth();
@@ -36,16 +40,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async () => {
     if (authClient) {
       await authClient.login({
-        identityProvider: "https://identity.ic0.app/#authorize",  // Ensure this is correct
+        identityProvider: "https://identity.ic0.app/#authorize", // Ensure this is correct
         onSuccess: () => {
           const identity = authClient.getIdentity();
           setPrincipal(identity.getPrincipal().toString());
           console.log("Login successful!");
-          console.log(identity.getPrincipal().toString())
+          console.log(identity.getPrincipal().toString());
         },
         onError: (error) => {
           console.error("Login failed", error);
-        }
+        },
       });
     }
   };
@@ -56,6 +60,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setPrincipal(null);
     }
   };
+
+  if (loading) return <p>Loading...</p>;
 
   return (
     <AuthContext.Provider value={{ principal, login, logout }}>

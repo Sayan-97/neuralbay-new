@@ -1,23 +1,38 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { toast } from "sonner"
+import { useContext, useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { AuthContext } from "@/context/AuthContext";
 
 export function LoginButton() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const authContext = useContext(AuthContext);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    if (authContext?.principal) {
+      setIsLoggedIn(true);
+    } else {
+      setIsLoggedIn(false);
+    }
+  }, [authContext?.principal]);
 
   const handleLogin = async () => {
-    // In a real implementation, this would interact with the Internet Identity service
-    setIsLoggedIn(true)
-    toast.success("Logged in successfully!")
-  }
+    if (authContext?.login) {
+      await authContext.login();
+    }
+  };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false)
-    toast.success("Logged out successfully!")
-  }
+  const handleLogout = async () => {
+    if (authContext?.logout) {
+      await authContext.logout();
+    }
+    toast.success("Logged out successfully!");
+  };
 
-  return <Button onClick={isLoggedIn ? handleLogout : handleLogin}>{isLoggedIn ? "Logout" : "Login"}</Button>
+  return (
+    <Button onClick={isLoggedIn ? handleLogout : handleLogin}>
+      {isLoggedIn ? "Logout" : "Login"}
+    </Button>
+  );
 }
-

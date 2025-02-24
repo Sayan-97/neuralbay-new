@@ -1,18 +1,14 @@
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ModelApiTest } from "@/components/model-api-test"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Star, Download, Share2 } from "lucide-react"
-import Image from "next/image"
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ModelApiTest } from "@/components/model-api-test";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Star, Download, Share2 } from "lucide-react";
+import Image from "next/image";
 
 export async function generateStaticParams() {
   // For now, return a static set of IDs to avoid build errors
-  return [
-    { id: '1' },
-    { id: '2' },
-    { id: '3' },
-  ]
+  return [{ id: "1" }, { id: "2" }, { id: "3" }];
 }
 
 export default function ModelPage({ params }: { params: { id: string } }) {
@@ -28,7 +24,7 @@ export default function ModelPage({ params }: { params: { id: string } }) {
     image: "https://picsum.photos/seed/model1/800/400",
     rating: "4.5",
     ratingCount: "1,234",
-  }
+  };
 
   return (
     <div className="container py-8 px-4 sm:px-6 lg:px-8">
@@ -47,11 +43,15 @@ export default function ModelPage({ params }: { params: { id: string } }) {
             <h1 className="text-3xl font-bold mb-2">{model.name}</h1>
             <div className="flex items-center gap-2 mb-4">
               <Badge>{model.category}</Badge>
-              <span className="text-sm text-muted-foreground">by {model.vendor}</span>
+              <span className="text-sm text-muted-foreground">
+                by {model.vendor}
+              </span>
               <div className="flex items-center ml-auto">
                 <Star className="h-5 w-5 fill-primary text-primary mr-1" />
                 <span className="font-medium">{model.rating}</span>
-                <span className="text-sm text-muted-foreground ml-1">({model.ratingCount})</span>
+                <span className="text-sm text-muted-foreground ml-1">
+                  ({model.ratingCount})
+                </span>
               </div>
             </div>
             <p className="text-lg mb-6">{model.description}</p>
@@ -65,9 +65,11 @@ export default function ModelPage({ params }: { params: { id: string } }) {
             <TabsContent value="details" className="p-6">
               <h2 className="text-xl font-semibold mb-4">Model Details</h2>
               <p className="mb-4">
-                Stable Diffusion v1 is a state-of-the-art image generation model that can create high-quality images
-                from textual descriptions. It uses a diffusion-based approach to generate images, resulting in more
-                coherent and detailed outputs compared to previous models.
+                Stable Diffusion v1 is a state-of-the-art image generation model
+                that can create high-quality images from textual descriptions.
+                It uses a diffusion-based approach to generate images, resulting
+                in more coherent and detailed outputs compared to previous
+                models.
               </p>
               <h3 className="text-lg font-semibold mb-2">Key Features:</h3>
               <ul className="list-disc list-inside mb-4">
@@ -93,7 +95,9 @@ export default function ModelPage({ params }: { params: { id: string } }) {
               <h2 className="text-xl font-semibold mb-4">Pricing</h2>
               <p className="mb-4">Price per call: {model.price}</p>
               <div className="bg-muted p-4 rounded-lg">
-                <h3 className="text-lg font-semibold mb-2">Subscription Plans</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  Subscription Plans
+                </h3>
                 <ul className="space-y-2">
                   <li>Basic: 1,000 calls/month - 8 ICP</li>
                   <li>Pro: 10,000 calls/month - 70 ICP</li>
@@ -135,6 +139,5 @@ export default function ModelPage({ params }: { params: { id: string } }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
-
