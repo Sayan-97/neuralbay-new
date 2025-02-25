@@ -25,7 +25,7 @@ export default function MarketplacePage() {
   };
 
   return (
-    <div className="container py-8 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+    <>
       {showLoginPrompt && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm z-50">
           <div className="bg-white p-8 rounded-lg shadow-xl w-80 text-center">
@@ -50,14 +50,16 @@ export default function MarketplacePage() {
           </div>
         </div>
       )}
-      <h1 className="text-4xl font-bold mb-6 text-center homepage-highlight">
-        AI Model Marketplace
-      </h1>
-      <p className="text-xl text-center mb-8 text-muted-foreground">
-        Discover and deploy cutting-edge AI models on Neuralbay
-      </p>
-      <CategoryFilter onFilterChange={handleFilterChange} />
-      <ModelGrid filters={filters} setShowLoginPrompt={setShowLoginPrompt} />
-    </div>
+      <div className="container py-8 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+        <h1 className="text-4xl font-bold mb-6 text-center homepage-highlight">
+          AI Model Marketplace
+        </h1>
+        <p className="text-xl text-center mb-8 text-muted-foreground">
+          Discover and deploy cutting-edge AI models on Neuralbay
+        </p>
+        <CategoryFilter onFilterChange={handleFilterChange} />
+        <ModelGrid filters={filters} setShowLoginPrompt={setShowLoginPrompt} />
+      </div>
+    </>
   );
 }

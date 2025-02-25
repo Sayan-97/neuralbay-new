@@ -185,7 +185,7 @@ export function ModelGrid({
               <Button
                 asChild
                 variant="ghost"
-                className="font-semibold text-primary hover:text-primary-foreground hover:bg-primary"
+                className="font-semibold text-primary cursor-pointer hover:text-primary-foreground hover:bg-primary"
                 onClick={() => handleCardClick(model.id)}
               >
                 <span className="flex items-center">
