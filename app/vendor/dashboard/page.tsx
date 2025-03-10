@@ -1,12 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useContext, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { VendorModelList } from "@/components/vendor-model-list"
 import Link from "next/link"
 import { BarChart, Users, Activity } from "lucide-react"
 import { motion } from "framer-motion"
+import { AuthContext } from "@/context/AuthContext"; 
+import { useRouter } from "next/navigation";
 
 interface VendorStats {
   totalRevenue: number
@@ -18,8 +20,16 @@ interface VendorStats {
 }
 
 export default function VendorDashboard() {
+  const { principal } = useContext(AuthContext) || {};
   const [stats, setStats] = useState<VendorStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!principal) {
+      router.push("/login");
+    }
+  }, [principal, router]);
 
   useEffect(() => {
     async function fetchStats() {
@@ -56,9 +66,11 @@ export default function VendorDashboard() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4, duration: 0.5 }}
         >
-          <Button asChild>
-            <Link href="/vendor/models/new">Publish New Model</Link>
-          </Button>
+  <Button>
+  <Link href="/vendor/models/new">Publish New Model</Link>
+</Button>
+
+
         </motion.div>
       </div>
       <motion.div
