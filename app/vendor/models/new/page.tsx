@@ -9,18 +9,18 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { AuthContext } from "../../../../context/AuthContext";
+import { usePlug } from "@/hooks/usePlug"; // Import Plug Wallet hook
 import { Actor, HttpAgent } from "@dfinity/agent";
 import { idlFactory } from "../../../../declarations/custom_greeting_backend";
 
 export default function PublishNewModelPage() {
   const router = useRouter();
-  const { principal } = useContext(AuthContext) || {};  // No more `login` here
+  const { principal } = useContext(AuthContext) || {};  
+  const { principalId } = usePlug(); // Get principal ID from Plug Wallet
   const [isLoading, setIsLoading] = useState(false);
-  const [models, setModels] = useState([]);
 
-  const canisterId = "ezvoz-kqaaa-aaaal-qnbpq-cai";
   const agent = new HttpAgent({ host: "https://ic0.app" });
-  const backendActor = Actor.createActor(idlFactory, { agent, canisterId });
+
 
   const [modelData, setModelData] = useState({
     name: "",
@@ -28,18 +28,23 @@ export default function PublishNewModelPage() {
     category: "",
     price: "",
     apiEndpoint: "",
-    modelImg: "",
+    image: "",
+    wallet_principal_id: principalId || "", // Auto-fill if Plug Wallet is connected
   });
 
   useEffect(() => {
     if (!principal) {
-      router.push("/login");  // 🚀 Redirect user to login page if not authenticated
+      router.push("/login");
     }
   }, [principal]);
 
+  useEffect(() => {
+    if (principalId) {
+      setModelData((prev) => ({ ...prev, wallet_principal_id: principalId }));
+    }
+  }, [principalId]);
 
-
-  const handleInputChange = (e: { target: { name: any; value: any; }; }) => {
+  const handleInputChange = (e: { target: { name: any; value: any } }) => {
     const { name, value } = e.target;
     setModelData((prev) => ({ ...prev, [name]: value }));
   };
@@ -48,12 +53,18 @@ export default function PublishNewModelPage() {
     setModelData((prev) => ({ ...prev, category: value }));
   };
 
-  const handleSubmit = async (e: { preventDefault: () => void; }) => {
+  const handleSubmit = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
     setIsLoading(true);
 
     if (!principal) {
-      router.push("/login");  // 🚀 Redirect before submitting
+      router.push("/login");
+      return;
+    }
+
+    if (!modelData.wallet_principal_id) {
+      toast.error("❌ Please enter a valid Principal ID for receiving payments.");
+      setIsLoading(false);
       return;
     }
 
@@ -70,6 +81,8 @@ export default function PublishNewModelPage() {
           category: modelData.category,
           price: modelData.price,
           apiEndpoint: modelData.apiEndpoint,
+          image: modelData.image || "https://picsum.photos/seed/model4/400/300",
+          wallet_principal_id: modelData.wallet_principal_id, // ✅ Include wallet principal ID
         }),
       });
 
@@ -80,21 +93,12 @@ export default function PublishNewModelPage() {
       const result = await response.json();
       console.log("Model published to API:", result);
 
-      // Upload to backend canister
-      const canisterResponse = await backendActor.addModel(
-        modelData.name,
-        modelData.apiEndpoint,
-        principal
-      );
 
-      console.log("Canister response:", canisterResponse);
-      toast.success("Model published successfully!");
-
-      // Fetch updated models list
+      toast.success("✅ Model published successfully!");
 
       router.push("/vendor/dashboard");
     } catch (error) {
-      console.error("Error publishing model:", error);
+      console.error("❌ Error publishing model:", error);
       toast.error("Failed to publish model. Please try again.");
     } finally {
       setIsLoading(false);
@@ -131,6 +135,28 @@ export default function PublishNewModelPage() {
         <div>
           <label htmlFor="price" className="block text-sm font-medium mb-1">Price (ICP)</label>
           <Input id="price" name="price" type="number" step="0.01" value={modelData.price} onChange={handleInputChange} required />
+        </div>
+        <div>
+          <label htmlFor="wallet_principal_id" className="block text-sm font-medium mb-1">Wallet Principal ID</label>
+          <Input
+            id="wallet_principal_id"
+            name="wallet_principal_id"
+            value={modelData.wallet_principal_id}
+            onChange={handleInputChange}
+            required
+            placeholder="Enter Principal ID"
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="image" className="block text-sm font-medium mb-1">Model Image URL (Optional)</label>
+          <Input
+            id="image"
+            name="image"
+            value={modelData.image}
+            onChange={handleInputChange}
+            placeholder="Enter image URL or leave empty for default"
+          />
         </div>
         <div>
           <label htmlFor="apiEndpoint" className="block text-sm font-medium mb-1">API Endpoint</label>

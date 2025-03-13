@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,74 +14,22 @@ import { Badge } from "@/components/ui/badge";
 import { Star, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { useContext, useState } from "react";
+import { useContext } from "react";
 import { AuthContext } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
-const models = [
-  {
-    id: "1",
-    name: "Stable Diffusion v1",
-    description: "State-of-the-art image generation model",
-    category: "Image Generation",
-    price: "0.01 ICP / call",
-    image: "https://picsum.photos/seed/model1/400/300",
-    rating: "4.5k",
-    type: "Subscription",
-  },
-  {
-    id: "2",
-    name: "GPT-4 Turbo",
-    description: "Advanced language model for text processing",
-    category: "Text Processing",
-    price: "0.05 ICP / call",
-    image: "https://picsum.photos/seed/model2/400/300",
-    rating: "4.5k",
-    type: "Purchase",
-  },
-  {
-    id: "3",
-    name: "Whisper ASR",
-    description: "Accurate speech recognition model",
-    category: "Audio Processing",
-    price: "0.02 ICP / call",
-    image: "https://picsum.photos/seed/model3/400/300",
-    rating: "4.5k",
-    type: "Subscription",
-  },
-  {
-    id: "4",
-    name: "Leonardo AI",
-    description:
-      "AI model specializing in styling images to various art styles as prompted by the user",
-    category: "Image Generation",
-    image: "https://picsum.photos/seed/model4/400/300",
-    rating: "4.5k",
-    price: "Free",
-    type: "Free",
-  },
-  {
-    id: "5",
-    name: "DALL-E 3",
-    description:
-      "Advanced image generation model with improved coherence and detail",
-    category: "Image Generation",
-    price: "0.03 ICP / call",
-    image: "https://picsum.photos/seed/model5/400/300",
-    rating: "4.8k",
-    type: "Subscription",
-  },
-  {
-    id: "6",
-    name: "BertSum",
-    description: "Extractive text summarization model based on BERT",
-    category: "Text Processing",
-    price: "0.01 ICP / call",
-    image: "https://picsum.photos/seed/model6/400/300",
-    rating: "4.2k",
-    type: "Subscription",
-  },
-];
+// ✅ Define the expected model structure
+interface Model {
+  _id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: string;
+  image?: string;
+  rating: string; 
+  type: string;
+}
 
 export function ModelGrid({
   filters,
@@ -91,6 +40,43 @@ export function ModelGrid({
 }) {
   const authContext = useContext(AuthContext);
   const router = useRouter();
+  const [models, setModels] = useState<Model[]>([]); 
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchModels();
+  }, []);
+
+  const fetchModels = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/api/marketplace/models");
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch models");
+      }
+
+      const fetchedModels: Model[] = await response.json(); 
+
+      // ✅ Ensure all models have necessary fields with defaults
+      const processedModels = fetchedModels.map((model) => ({
+        _id: model._id || crypto.randomUUID(),
+        name: model.name || "Untitled Model",
+        description: model.description || "No description provided.",
+        category: model.category || "Uncategorized",
+        price: model.price || "N/A",
+        image: model.image || "https://via.placeholder.com/400x300",
+        rating: "4.2k", 
+        type: "Subscription", 
+      }));
+
+      setModels(processedModels);
+    } catch (error) {
+      console.error("Error fetching models:", error);
+      toast.error("Failed to fetch models.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCardClick = async (modelId: string) => {
     if (!authContext || !authContext.principal) {
@@ -99,14 +85,6 @@ export function ModelGrid({
     }
 
     router.push(`/model/${modelId}`);
-
-    // const hasPurchased = await checkPurchaseStatus(authContext.principal, modelId);
-    // if (hasPurchased) {
-    //     const model = models.find((m) => m.modelId === modelId);
-    //     window.location.href = "https://model-test-chi.vercel.app/";
-    // } else {
-    //     navigate(`/marketplace/${modelId}`);
-    // }
   };
 
   const filteredModels = models.filter((model) => {
@@ -124,6 +102,10 @@ export function ModelGrid({
     return categoryMatch && priceMatch && searchMatch;
   });
 
+  if (loading) {
+    return <div className="text-center text-gray-500">Loading models...</div>;
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -131,72 +113,79 @@ export function ModelGrid({
       transition={{ duration: 0.5 }}
       className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
     >
-      {filteredModels.map((model, index) => (
-        <motion.div
-          key={model.id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.1, duration: 0.5 }}
-        >
-          <Card className="glossy-card overflow-hidden hover-glow">
-            <CardHeader className="p-0">
-              <div className="relative h-48 w-full">
+      {filteredModels.length === 0 ? (
+        <div className="text-center text-gray-500 col-span-full">
+          No models found.
+        </div>
+      ) : (
+        filteredModels.map((model, index) => (
+          <motion.div
+            key={model._id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1, duration: 0.5 }}
+          >
+            <Card className="glossy-card overflow-hidden hover-glow">
+              <CardHeader className="p-0">
+                <div className="relative h-48 w-full">
                 <Image
-                  src={model.image || "/placeholder.svg"}
-                  alt={model.name}
-                  layout="fill"
-                  objectFit="cover"
-                  className="transition-transform duration-300 hover:scale-105"
-                />
-                <div className="absolute top-2 right-2">
-                  <Badge
-                    variant="secondary"
-                    className="bg-secondary text-white"
-                  >
-                    {model.category}
-                  </Badge>
+  src={model.image ?? "https://via.placeholder.com/400x300"} 
+  alt={model.name}
+  layout="fill"
+  objectFit="cover"
+  className="transition-transform duration-300 hover:scale-105"
+/>
+
+                  <div className="absolute top-2 right-2">
+                    <Badge
+                      variant="secondary"
+                      className="bg-secondary text-white"
+                    >
+                      {model.category}
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4">
-              <CardTitle className="text-xl mb-2 text-white">
-                {model.name}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mb-4">
-                {model.description}
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-muted-foreground">
-                  {model.price}
-                </span>
-                <span className="text-sm text-muted-foreground flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-[#ffc107] text-[#ffc107]" />
-                  {model.rating}
-                </span>
-              </div>
-            </CardContent>
-            <CardFooter className="p-4 pt-0 flex justify-between items-center">
-              <Badge
-                variant="outline"
-                className="border-accent-foreground text-muted-foreground"
-              >
-                {model.type}
-              </Badge>
-              <Button
-                asChild
-                variant="ghost"
-                className="font-semibold text-primary cursor-pointer hover:text-primary-foreground hover:bg-primary"
-                onClick={() => handleCardClick(model.id)}
-              >
-                <span className="flex items-center">
-                  View Details
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </span>
-              </Button>
-            </CardFooter>
-          </Card>
-        </motion.div>
-      ))}
+              </CardHeader>
+              <CardContent className="p-4">
+                <CardTitle className="text-xl mb-2 text-white">
+                  {model.name}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {model.description}
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {model.price}
+                  </span>
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Star className="h-4 w-4 fill-[#ffc107] text-[#ffc107]" />
+                    {model.rating}
+                  </span>
+                </div>
+              </CardContent>
+              <CardFooter className="p-4 pt-0 flex justify-between items-center">
+                <Badge
+                  variant="outline"
+                  className="border-accent-foreground text-muted-foreground"
+                >
+                  {model.type}
+                </Badge>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="font-semibold text-primary cursor-pointer hover:text-primary-foreground hover:bg-primary"
+                  onClick={() => handleCardClick(model._id)}
+                >
+                  <span className="flex items-center">
+                    View Details
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </span>
+                </Button>
+              </CardFooter>
+            </Card>
+          </motion.div>
+        ))
+      )}
     </motion.div>
   );
 }

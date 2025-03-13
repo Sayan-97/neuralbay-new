@@ -1,67 +1,56 @@
-import { supabase } from "@/app/utils/supabaseClient";
-import ModelPageClient from "./ModelPageClient";
+"use client";
 
-export async function generateStaticParams() {
-  return [{ id: "1" }, { id: "2" }, { id: "3" }];
+import { useState, useEffect } from "react";
+import ModelPageClient from "./ModelPageClient";
+import { toast } from "sonner";
+
+// ✅ Define the expected model structure
+interface Model {
+  _id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: string;
+  image?: string;
+  rating: string; 
+  type: string;
 }
 
-async function getModelData(id: string) {
-  const { data, error } = await supabase
-    .from("models")
-    .select("id, name, description, price, modelimg, wallet_principal_id")
-    .eq("id", id)
-    .single();
+export default function ModelPage({ params }: { params: { id: string } }) {
+  const [modelData, setModelData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchModelData = async () => {
+      try {
+        const response = await fetch(`http://localhost:3001/api/marketplace/models/${params.id}`);
+    
+        if (!response.ok) {
+          throw new Error("Model not found");
+        }
+    
+        const modelData = await response.json();
+        setModelData(modelData);
+      } catch (error) {
+        console.error("Error fetching model:", error);
+        toast.error("Failed to fetch model.");
+        setError("Model not found");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchModelData();
+  }, [params.id]);
+
+  if (loading) {
+    return <div className="text-center text-lg">Loading model data...</div>;
+  }
 
   if (error) {
-    console.error("Error fetching model:", error);
-    return null;
+    return <div className="text-center text-red-500">Error: {error}</div>;
   }
+  return <ModelPageClient initialData={modelData} params={{ id: modelData?._id }} />;
 
-  return {
-    id: data.id,
-    modelId: data.id,
-    name: data.name,
-    modelName: data.name,
-    description: data.description,
-    shortDes: data.description,
-    modelImg: data.modelimg || "/placeholder.svg",
-    image: data.modelimg || "/placeholder.svg",
-    modelPrice: {
-      eth: data.price?.toString() || "0",
-      dollar: (Number.parseFloat(data.price) || 0) * 167,
-    },
-    wallet_principal_id: data.wallet_principal_id,
-    rating: "4.5",
-    ratingCount: "1,234",
-    reviews: [],
-    category: "AI Model",
-    vendor: "AI Provider",
-  };
-}
-
-export default async function ModelPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  // const modelData = await getModelData(params.id);
-  const modelData = {
-    id: params.id,
-    name: "Stable Diffusion v1",
-    description: "State-of-the-art image generation model",
-    category: "Image Generation",
-    price: "0.01 ICP / call",
-    vendor: "AI Research Labs",
-    apiEndpoint: "https://api.example.com/v1/generate",
-    image: "https://picsum.photos/seed/model1/800/400",
-    rating: "4.5",
-    ratingCount: "1,234",
-    modelPrice: {
-      eth: "0.01",
-      dollar: 1.67,
-    },
-    wallet_principal_id: "example-principal-id", // Add a placeholder principal ID
-  }
-
-  return <ModelPageClient initialData={modelData} params={params} />;
 }

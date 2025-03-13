@@ -7,18 +7,19 @@ import { ModelApiTest } from "@/components/model-api-test"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Star, Download, Share2 } from "lucide-react"
 import Image from "next/image"
-import { useContext, useState } from "react"
+import { useContext, useEffect, useState } from "react"
 import { usePlug } from "@/hooks/usePlug"
 import { AuthContext } from "@/context/AuthContext"
 import { useRouter } from "next/navigation"
-import { recordPurchaseInSupabase } from "@/lib/supabaseHelpers"
 
 interface ModelPrice {
+  icp: number
   eth: string
   dollar: number
 }
 
 interface ModelData {
+  _id: any
   id: string
   name: string
   description: string
@@ -42,6 +43,7 @@ export default function ModelPageClient({ initialData, params }: ModelPageClient
   const [model] = useState<ModelData>(initialData)
   const { isConnected, connectPlug, requestTransfer } = usePlug()
   const authContext = useContext(AuthContext)
+const [purchased, setPurchased] = useState<boolean>(false);
   const router = useRouter()
 
   if (!authContext || !authContext.principal) {
@@ -49,52 +51,125 @@ export default function ModelPageClient({ initialData, params }: ModelPageClient
     return;
   }
 
+  useEffect(() => {
+    const checkIfPurchased = async () => {
+      if (!authContext?.principal || !model._id) return;
+  
+      try {
+        const response = await fetch(
+          `http://localhost:3001/api/users/purchases/${model._id}`,
+          {
+            headers: { "x-user-id": authContext.principal },
+          }
+        );
+  
+        if (!response.ok) {
+          console.error(`❌ Failed to fetch purchase status: ${response.status}`);
+          return;
+        }
+  
+        const data = await response.json();
+        console.log("🔄 Purchase Status Fetched:", data);
+  
+        setPurchased(data.purchased); // ✅ Ensure button updates correctly
+  
+      } catch (error) {
+        console.error("❌ Error checking purchase status:", error);
+      }
+    };
+  
+    checkIfPurchased();
+  }, [model._id, authContext?.principal, purchased]);  // ✅ Ensure it re-runs after a purchase
+  
+
   const handleBuyClick = async () => {
     if (!authContext || !authContext.principal) {
-      console.error("User is not authenticated or principal ID is missing.")
-      router.push("/login")
-      return
+      console.error("❌ User is not authenticated or principal ID is missing.");
+      router.push("/login");
+      return;
     }
-
+  
+    if (!model || !model._id) { 
+      console.error("❌ Model ID is missing!", model);
+      alert("Error: Model ID is missing.");
+      return;
+    }
+  
     if (!model.wallet_principal_id) {
-      console.error("Recipient wallet address is missing.")
-      alert("Error: No recipient wallet address found for this model.")
-      return
+      console.error("❌ Recipient wallet address is missing.");
+      alert("Error: No recipient wallet address found for this model.");
+      return;
     }
-
-    try {
-      const amountICP = Number.parseFloat(model.modelPrice?.eth || "0")
-      console.log(`Transferring ${amountICP} ICP to ${model.wallet_principal_id}`)
-
-      const response = await requestTransfer(model.wallet_principal_id, amountICP)
-
-      if (response && response.height) {
-        console.log("Transaction successful:", response)
-        await recordPurchaseInSupabase(authContext.principal, model.id)
-        alert("Purchase successful!")
-        router.push("/")
-      } else {
-        console.warn("Transaction canceled or failed.")
-        alert("Transaction was canceled or failed. Please try again.")
+  
+    if (!isConnected) {
+      console.log("🔄 Connecting Plug Wallet...");
+      const connected = await connectPlug();
+      if (!connected) {
+        console.error("❌ Plug Wallet connection failed.");
+        alert("Plug Wallet connection failed. Please try again.");
+        return;
       }
-    } catch (error) {
-      console.error("Transaction error:", error)
-      alert("Transaction failed. Please try again.")
     }
-  }
-
+  
+    try {
+      const recipientWallet = model.wallet_principal_id;
+      const amountICP = Number.parseFloat(model.price || "0");
+  
+      console.log(`🔄 Transferring ${amountICP} ICP to ${recipientWallet}`);
+  
+      const response = await requestTransfer(recipientWallet, amountICP);
+  
+      if (!response?.height) {
+        console.warn("⚠️ Transaction canceled or failed.");
+        alert("Transaction was canceled or failed. Please try again.");
+        return;
+      }
+  
+      console.log("✅ Transaction successful:", response);
+  
+      // ✅ Save purchase in the database
+      const modelResponse = await fetch(
+        `http://localhost:3001/api/marketplace/models/${model._id}/purchase`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": authContext.principal,
+          },
+        }
+      );
+  
+      if (!modelResponse.ok) {
+        console.error(`❌ Error recording purchase: ${modelResponse.status}`);
+        alert(`Error: ${modelResponse.statusText}`);
+        return;
+      }
+  
+      console.log("✅ Purchase recorded in database");
+      alert("✅ Purchase successful!");
+  
+      // ✅ Immediately update UI
+      setPurchased(true); // Ensures button changes to "Purchased"
+  
+    } catch (error) {
+      console.error("❌ Transaction error:", error);
+      alert("Transaction failed. Please try again.");
+    }
+  };
+  
+  
   return (
     <div className="container py-8 px-4 sm:px-6 lg:px-8">
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <div className="glossy-card p-6 rounded-lg mb-6">
             <div className="relative h-64 w-full mb-6">
-              <Image
-                src={model.image || "/placeholder.svg"}
-                alt={model.name}
-                fill
-                className="rounded-lg object-cover"
-              />
+            {model ? (
+  <Image src={model.image || "/placeholder.svg"} alt={model.name} fill className="rounded-lg object-cover" />
+) : (
+  <p className="text-center">Loading model...</p>
+)}
+
             </div>
             <div className="flex flex-col gap-4">
               <h1 className="text-3xl font-bold">{model.name}</h1>
@@ -169,12 +244,11 @@ export default function ModelPageClient({ initialData, params }: ModelPageClient
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-end gap-2">
-                  <p className="text-3xl font-bold">{model.modelPrice.eth} ICP</p>
-                  <p className="text-lg text-muted-foreground">${model.modelPrice.dollar}</p>
+                <p className="text-3xl font-bold">{model.price} ICP</p>
                 </div>
-                <Button className="w-full" onClick={handleBuyClick}>
-                  Buy Now
-                </Button>
+                <Button className="w-full" onClick={handleBuyClick} disabled={purchased}>
+  {purchased ? "Purchased" : "Buy Now"}
+</Button>
                 <div className="flex justify-between">
                   <Button variant="outline" className="w-[48%]">
                     <Download className="mr-2 h-4 w-4" /> Download

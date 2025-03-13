@@ -8,8 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { Actor, HttpAgent } from "@dfinity/agent";
-import { idlFactory } from "../../../../declarations/custom_greeting_backend";
 import { AuthContext } from "@/context/AuthContext";
 
 export default function EditModelPage({ params }: { params: { id: string } }) {
@@ -85,33 +83,45 @@ export default function EditModelPage({ params }: { params: { id: string } }) {
     setModelData((prev) => ({ ...prev, category: value }));
   };
 
-  const handleSubmit = async (e: { preventDefault: () => void; }) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
+  
     try {
+      if (!principal) {
+        throw new Error("User is not authenticated. Please log in.");
+      }
+  
       const response = await fetch(`http://localhost:3001/api/vendor/models/${params.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "x-user-id": principal || "",  // Ensure it's always a string
         },
         body: JSON.stringify(modelData),
       });
-
+  
       if (!response.ok) {
-        throw new Error("Failed to update model");
+        throw new Error(`Failed to update model: ${response.status}`);
       }
-
-       toast.success("Model updated successfully!");
+  
+      toast.success("Model updated successfully!");
       router.push("/vendor/dashboard");
-    } catch (error) {
+    } catch (error: unknown) {  
       console.error("Error updating model:", error);
-      toast.error("Failed to update model. Please try again.");
+      
+      // ✅ Ensure error is an instance of Error before accessing `message`
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("An unexpected error occurred.");
+      }
     } finally {
       setIsLoading(false);
     }
   };
-
+  
+  
   if (isLoading) {
     return <div>Loading...</div>;
   }
