@@ -19,9 +19,10 @@ export default function PublishNewModelPage() {
   const { principalId } = usePlug(); // Get principal ID from Plug Wallet
   const [isLoading, setIsLoading] = useState(false);
 
-  const canisterId = "ezvoz-kqaaa-aaaal-qnbpq-cai";
+ {/* const canisterId = "ezvoz-kqaaa-aaaal-qnbpq-cai";
   const agent = new HttpAgent({ host: "https://ic0.app" });
-  const backendActor = Actor.createActor(idlFactory, { agent, canisterId });
+  const backendActor = Actor.createActor(idlFactory, { agent, canisterId }); 
+  */}
 
   const [modelData, setModelData] = useState({
     name: "",
@@ -94,7 +95,7 @@ export default function PublishNewModelPage() {
       const result = await response.json();
       console.log("Model published to API:", result);
 
-      // Upload to backend canister
+    {/*  // Upload to backend canister
       const canisterResponse = await backendActor.addModel(
         modelData.name,
         modelData.apiEndpoint,
@@ -102,6 +103,8 @@ export default function PublishNewModelPage() {
       );
 
       console.log("Canister response:", canisterResponse);
+
+    */}
       toast.success("✅ Model published successfully!");
 
       router.push("/vendor/dashboard");
