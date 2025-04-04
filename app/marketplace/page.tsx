@@ -49,21 +49,29 @@ export default function MarketplacePage() {
       toast.success("User saved successfully!");
     } catch (error) {
       console.error("Error saving user:", error);
-      toast.error(error instanceof Error ? error.message : "Unexpected error occurred.");
+      toast.error(
+        error instanceof Error ? error.message : "Unexpected error occurred."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        Loading...
+      </div>
+    );
   }
 
   if (!principal) {
     return (
-<div className="flex flex-col items-center justify-center h-screen">
+      <div className="flex flex-col items-center justify-center h-screen">
         <h1 className="text-2xl font-bold mb-4">Login Required</h1>
-        <p className="text-lg mb-6">You must log in with Internet Identity to access this page.</p>
+        <p className="text-lg mb-6">
+          You must log in with Internet Identity to access this page.
+        </p>
         <button
           onClick={login}
           className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg"

@@ -1,50 +1,53 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ModelApiTest } from "@/components/model-api-test"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Star, Download, Share2 } from "lucide-react"
-import Image from "next/image"
-import { useContext, useEffect, useState } from "react"
-import { usePlug } from "@/hooks/usePlug"
-import { AuthContext } from "@/context/AuthContext"
-import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ModelApiTest } from "@/components/model-api-test";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Star, Download, Share2 } from "lucide-react";
+import Image from "next/image";
+import { useContext, useEffect, useState } from "react";
+import { usePlug } from "@/hooks/usePlug";
+import { AuthContext } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 interface ModelPrice {
-  icp: number
-  eth: string
-  dollar: number
+  icp: number;
+  eth: string;
+  dollar: number;
 }
 
 interface ModelData {
-  _id: any
-  id: string
-  name: string
-  description: string
-  category: string
-  price: string
-  vendor: string
-  apiEndpoint: string
-  image: string
-  rating: string
-  ratingCount: string
-  modelPrice: ModelPrice
-  wallet_principal_id?: string
+  _id: any;
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: string;
+  vendor: string;
+  apiEndpoint: string;
+  image: string;
+  rating: string;
+  ratingCount: string;
+  modelPrice: ModelPrice;
+  wallet_principal_id?: string;
 }
 
 interface ModelPageClientProps {
-  initialData: ModelData
-  params: { id: string }
+  initialData: ModelData;
+  params: { id: string };
 }
 
-export default function ModelPageClient({ initialData, params }: ModelPageClientProps) {
-  const [model] = useState<ModelData>(initialData)
-  const { isConnected, connectPlug, requestTransfer } = usePlug()
-  const authContext = useContext(AuthContext)
-const [purchased, setPurchased] = useState<boolean>(false);
-  const router = useRouter()
+export default function ModelPageClient({
+  initialData,
+  params,
+}: ModelPageClientProps) {
+  const [model] = useState<ModelData>(initialData);
+  const { isConnected, connectPlug, requestTransfer } = usePlug();
+  const authContext = useContext(AuthContext);
+  const [purchased, setPurchased] = useState<boolean>(false);
+  const router = useRouter();
 
   if (!authContext || !authContext.principal) {
     router.push("/marketplace");
@@ -54,7 +57,7 @@ const [purchased, setPurchased] = useState<boolean>(false);
   useEffect(() => {
     const checkIfPurchased = async () => {
       if (!authContext?.principal || !model._id) return;
-  
+
       try {
         const response = await fetch(
           `http://localhost:3001/api/users/purchases/${model._id}`,
@@ -62,25 +65,25 @@ const [purchased, setPurchased] = useState<boolean>(false);
             headers: { "x-user-id": authContext.principal },
           }
         );
-  
+
         if (!response.ok) {
-          console.error(`❌ Failed to fetch purchase status: ${response.status}`);
+          console.error(
+            `❌ Failed to fetch purchase status: ${response.status}`
+          );
           return;
         }
-  
+
         const data = await response.json();
         console.log("🔄 Purchase Status Fetched:", data);
-  
+
         setPurchased(data.purchased); // ✅ Ensure button updates correctly
-  
       } catch (error) {
         console.error("❌ Error checking purchase status:", error);
       }
     };
-  
+
     checkIfPurchased();
-  }, [model._id, authContext?.principal, purchased]);  // ✅ Ensure it re-runs after a purchase
-  
+  }, [model._id, authContext?.principal, purchased]); // ✅ Ensure it re-runs after a purchase
 
   const handleBuyClick = async () => {
     if (!authContext || !authContext.principal) {
@@ -88,19 +91,19 @@ const [purchased, setPurchased] = useState<boolean>(false);
       router.push("/login");
       return;
     }
-  
-    if (!model || !model._id) { 
+
+    if (!model || !model._id) {
       console.error("❌ Model ID is missing!", model);
       alert("Error: Model ID is missing.");
       return;
     }
-  
+
     if (!model.wallet_principal_id) {
       console.error("❌ Recipient wallet address is missing.");
       alert("Error: No recipient wallet address found for this model.");
       return;
     }
-  
+
     if (!isConnected) {
       console.log("🔄 Connecting Plug Wallet...");
       const connected = await connectPlug();
@@ -110,23 +113,23 @@ const [purchased, setPurchased] = useState<boolean>(false);
         return;
       }
     }
-  
+
     try {
       const recipientWallet = model.wallet_principal_id;
       const amountICP = Number.parseFloat(model.price || "0");
-  
+
       console.log(`🔄 Transferring ${amountICP} ICP to ${recipientWallet}`);
-  
+
       const response = await requestTransfer(recipientWallet, amountICP);
-  
+
       if (!response?.height) {
         console.warn("⚠️ Transaction canceled or failed.");
         alert("Transaction was canceled or failed. Please try again.");
         return;
       }
-  
+
       console.log("✅ Transaction successful:", response);
-  
+
       // ✅ Save purchase in the database
       const modelResponse = await fetch(
         `http://localhost:3001/api/marketplace/models/${model._id}/purchase`,
@@ -138,52 +141,61 @@ const [purchased, setPurchased] = useState<boolean>(false);
           },
         }
       );
-  
+
       if (!modelResponse.ok) {
         console.error(`❌ Error recording purchase: ${modelResponse.status}`);
         alert(`Error: ${modelResponse.statusText}`);
         return;
       }
-  
+
       console.log("✅ Purchase recorded in database");
       alert("✅ Purchase successful!");
-  
+
       // ✅ Immediately update UI
       setPurchased(true); // Ensures button changes to "Purchased"
-  
     } catch (error) {
       console.error("❌ Transaction error:", error);
       alert("Transaction failed. Please try again.");
     }
   };
-  
-  
+
   return (
     <div className="container py-8 px-4 sm:px-6 lg:px-8">
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <div className="glossy-card p-6 rounded-lg mb-6">
             <div className="relative h-64 w-full mb-6">
-            {model ? (
-  <Image src={model.image || "/placeholder.svg"} alt={model.name} fill className="rounded-lg object-cover" />
-) : (
-  <p className="text-center">Loading model...</p>
-)}
-
+              {model ? (
+                <Image
+                  src={model.image || "/placeholder.svg"}
+                  alt={model.name}
+                  fill
+                  className="rounded-lg object-cover"
+                />
+              ) : (
+                <p className="text-center">Loading model...</p>
+              )}
             </div>
             <div className="flex flex-col gap-4">
               <h1 className="text-3xl font-bold">{model.name}</h1>
               <div className="flex items-center gap-2">
                 <Badge>{model.category}</Badge>
-                <span className="text-sm text-muted-foreground">by {model.vendor}</span>
+                <span className="text-sm text-muted-foreground">
+                  by {model.vendor}
+                </span>
                 <div className="flex items-center ml-auto">
                   <div className="flex gap-1">
                     {[...Array(4)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 fill-primary text-primary" />
+                      <Star
+                        key={i}
+                        className="h-5 w-5 fill-primary text-primary"
+                      />
                     ))}
                     <Star className="h-5 w-5 text-primary" />
                   </div>
-                  <span className="text-sm text-muted-foreground ml-2">({model.ratingCount})</span>
+                  <span className="text-sm text-muted-foreground ml-2">
+                    ({model.ratingCount})
+                  </span>
                 </div>
               </div>
               <p className="text-lg">{model.description}</p>
@@ -198,9 +210,11 @@ const [purchased, setPurchased] = useState<boolean>(false);
             <TabsContent value="details" className="p-6">
               <h2 className="text-xl font-semibold mb-4">Model Details</h2>
               <p className="mb-4">
-                Stable Diffusion v1 is a state-of-the-art image generation model that can create high-quality images
-                from textual descriptions. It uses a diffusion-based approach to generate images, resulting in more
-                coherent and detailed outputs compared to previous models.
+                Stable Diffusion v1 is a state-of-the-art image generation model
+                that can create high-quality images from textual descriptions.
+                It uses a diffusion-based approach to generate images, resulting
+                in more coherent and detailed outputs compared to previous
+                models.
               </p>
               <h3 className="text-lg font-semibold mb-2">Key Features:</h3>
               <ul className="list-disc list-inside mb-4">
@@ -226,7 +240,9 @@ const [purchased, setPurchased] = useState<boolean>(false);
               <h2 className="text-xl font-semibold mb-4">Pricing</h2>
               <p className="mb-4">Price per call: {model.price}</p>
               <div className="bg-muted p-4 rounded-lg">
-                <h3 className="text-lg font-semibold mb-2">Subscription Plans</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  Subscription Plans
+                </h3>
                 <ul className="space-y-2">
                   <li>Basic: 1,000 calls/month - 8 ICP</li>
                   <li>Pro: 10,000 calls/month - 70 ICP</li>
@@ -244,11 +260,15 @@ const [purchased, setPurchased] = useState<boolean>(false);
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-end gap-2">
-                <p className="text-3xl font-bold">{model.price} ICP</p>
+                  <p className="text-3xl font-bold">{model.price} ICP</p>
                 </div>
-                <Button className="w-full" onClick={handleBuyClick} disabled={purchased}>
-  {purchased ? "Purchased" : "Buy Now"}
-</Button>
+                <Button
+                  className="w-full"
+                  onClick={handleBuyClick}
+                  disabled={purchased}
+                >
+                  {purchased ? "Purchased" : "Buy Now"}
+                </Button>
                 <div className="flex justify-between">
                   <Button variant="outline" className="w-[48%]">
                     <Download className="mr-2 h-4 w-4" /> Download
@@ -274,6 +294,5 @@ const [purchased, setPurchased] = useState<boolean>(false);
         </div>
       </div>
     </div>
-  )
+  );
 }
-

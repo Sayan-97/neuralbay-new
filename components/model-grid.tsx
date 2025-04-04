@@ -27,7 +27,7 @@ interface Model {
   category: string;
   price: string;
   image?: string;
-  rating: string; 
+  rating: string;
   type: string;
 }
 
@@ -40,7 +40,7 @@ export function ModelGrid({
 }) {
   const authContext = useContext(AuthContext);
   const router = useRouter();
-  const [models, setModels] = useState<Model[]>([]); 
+  const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,13 +49,15 @@ export function ModelGrid({
 
   const fetchModels = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/marketplace/models");
+      const response = await fetch(
+        "http://localhost:3001/api/endpoints"
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch models");
       }
 
-      const fetchedModels: Model[] = await response.json(); 
+      const fetchedModels: Model[] = await response.json();
 
       // ✅ Ensure all models have necessary fields with defaults
       const processedModels = fetchedModels.map((model) => ({
@@ -65,8 +67,8 @@ export function ModelGrid({
         category: model.category || "Uncategorized",
         price: model.price || "N/A",
         image: model.image || "https://via.placeholder.com/400x300",
-        rating: "4.2k", 
-        type: "Subscription", 
+        rating: "4.2k",
+        type: "Subscription",
       }));
 
       setModels(processedModels);
@@ -111,7 +113,7 @@ export function ModelGrid({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+      className="w-full grid gap-6 md:grid-cols-2 lg:grid-cols-3"
     >
       {filteredModels.length === 0 ? (
         <div className="text-center text-gray-500 col-span-full">
@@ -128,13 +130,13 @@ export function ModelGrid({
             <Card className="glossy-card overflow-hidden hover-glow">
               <CardHeader className="p-0">
                 <div className="relative h-48 w-full">
-                <Image
-  src={model.image ?? "https://via.placeholder.com/400x300"} 
-  alt={model.name}
-  layout="fill"
-  objectFit="cover"
-  className="transition-transform duration-300 hover:scale-105"
-/>
+                  <Image
+                    src={model.image ?? "https://via.placeholder.com/400x300"}
+                    alt={model.name}
+                    layout="fill"
+                    objectFit="cover"
+                    className="transition-transform duration-300 hover:scale-105"
+                  />
 
                   <div className="absolute top-2 right-2">
                     <Badge

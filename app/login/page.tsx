@@ -32,8 +32,6 @@ export default function LoginButton() {
     toast.success("Logged out successfully!");
   };
 
-
-  
   const saveUserToDatabase = async (principalId: string) => {
     try {
       const response = await fetch("http://localhost:3001/api/auth/login", {
