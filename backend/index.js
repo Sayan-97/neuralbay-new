@@ -67,7 +67,10 @@ const marketplaceModelSchema = new mongoose.Schema({
   price: { type: String, required: true },
   image: { type: String, default: "" },
   wallet_principal_id: { type: String, required: true }, 
+  userId: String,
 });
+
+
 
 const MarketplaceModel = mongoose.model('MarketplaceModel', marketplaceModelSchema);
 
@@ -307,6 +310,7 @@ app.post("/api/vendor/models", async (req, res) => {
       price,
       image: image || "https://picsum.photos/seed/model4/400/300",
       wallet_principal_id,
+      userId: req.userId,
     });
 
     await newMarketplaceModel.save();

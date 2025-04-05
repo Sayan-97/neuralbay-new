@@ -32,6 +32,7 @@ interface ModelData {
   ratingCount: string;
   modelPrice: ModelPrice;
   wallet_principal_id?: string;
+  userId?: string;
 }
 
 interface ModelPageClientProps {
@@ -48,6 +49,10 @@ export default function ModelPageClient({
   const authContext = useContext(AuthContext);
   const [purchased, setPurchased] = useState<boolean>(false);
   const router = useRouter();
+
+  const isOwner =
+  (authContext?.principal || "").trim() === (model?.userId || "").trim();
+
 
   if (!authContext || !authContext.principal) {
     router.push("/marketplace");
@@ -161,6 +166,11 @@ export default function ModelPageClient({
       alert("Transaction failed. Please try again.");
     }
   };
+
+  console.log("authContext.principal", `"${authContext.principal}"`);
+console.log("model.wallet_principal_id", `"${model.wallet_principal_id}"`);
+console.log("model.user_id", `"${model.userId}"`);
+
 
   return (
     <div className="container py-8 px-4 sm:px-6 lg:px-8">
@@ -311,13 +321,21 @@ export default function ModelPageClient({
                 <div className="flex items-end gap-2">
                   <p className="text-3xl font-bold">{model.price} ICP</p>
                 </div>
-                <Button
-                  className="w-full"
-                  onClick={handleBuyClick}
-                  disabled={purchased}
-                >
-                  {purchased ? "Purchased" : "Buy Now"}
-                </Button>
+                {!isOwner ? (
+  <Button
+    className="w-full"
+    onClick={handleBuyClick}
+    disabled={purchased}
+  >
+    {purchased ? "Purchased" : "Buy Now"}
+  </Button>
+) : (
+  <p className="text-muted-foreground text-sm text-center">
+    Owner
+  </p>
+)}
+
+
                 <div className="flex justify-between">
                   <Button variant="outline" className="w-[48%]">
                     <Download className="mr-2 h-4 w-4" /> Download
