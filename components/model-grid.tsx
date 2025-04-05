@@ -49,9 +49,7 @@ export function ModelGrid({
 
   const fetchModels = async () => {
     try {
-      const response = await fetch(
-        "http://localhost:3001/api/endpoints"
-      );
+      const response = await fetch("http://localhost:3001/api/marketplace/models");
 
       if (!response.ok) {
         throw new Error("Failed to fetch models");

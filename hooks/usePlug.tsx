@@ -50,9 +50,6 @@ export const usePlug = () => {
     }
   };
 
-  useEffect(() => {
-    checkConnection();
-  }, []);
 
   const connectPlug = async (): Promise<boolean> => {
     if (!window.ic?.plug?.requestConnect) {

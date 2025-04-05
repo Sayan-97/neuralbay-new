@@ -26,10 +26,30 @@ interface Model {
   createdAt: string
 }
 
+
+// Helper function to include x-user-id in headers
+const authFetch = async (url: string, options: RequestInit = {}) => {
+  const principalId = localStorage.getItem("principalId") ?? "admin-1"
+  const adminPass = localStorage.getItem("admin_pass") ?? ""
+
+  return fetch(url, {
+    ...options,
+    headers: {
+      "x-user-id": principalId,
+      "x-admin-password": adminPass,
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  })
+}
+
+
 export function AdminModelsList() {
   const [models, setModels] = useState<Model[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const BACKEND_URL = "http://localhost:3001";
+
 
   useEffect(() => {
     fetchModels()
@@ -38,7 +58,7 @@ export function AdminModelsList() {
   const fetchModels = async () => {
     try {
       setLoading(true)
-      const response = await fetch("/api/admin/models")
+      const response = await authFetch(`${BACKEND_URL}/api/admin/models`)
       if (!response.ok) {
         throw new Error("Failed to fetch models")
       }
@@ -54,7 +74,7 @@ export function AdminModelsList() {
 
   const deleteModel = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/models/${id}`, {
+      const response = await authFetch(`${BACKEND_URL}/api/admin/models/${id}`, {
         method: "DELETE",
       })
 
@@ -72,7 +92,7 @@ export function AdminModelsList() {
 
   const approveModel = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/models/${id}/approve`, {
+      const response = await authFetch(`${BACKEND_URL}/api/admin/models/${id}/approve`, {
         method: "POST",
       })
 
@@ -90,7 +110,7 @@ export function AdminModelsList() {
 
   const rejectModel = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/models/${id}/reject`, {
+      const response = await authFetch(`${BACKEND_URL}/api/admin/models/${id}/reject`, {
         method: "POST",
       })
 

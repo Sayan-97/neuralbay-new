@@ -30,6 +30,8 @@ export function AdminVendorsList() {
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const BACKEND_URL = "http://localhost:3001";
+
 
   useEffect(() => {
     fetchVendors()
@@ -38,7 +40,7 @@ export function AdminVendorsList() {
   const fetchVendors = async () => {
     try {
       setLoading(true)
-      const response = await fetch("/api/admin/vendors")
+      const response = await fetch(`${BACKEND_URL}/api/vendors`)
       if (!response.ok) {
         throw new Error("Failed to fetch vendors")
       }
@@ -54,7 +56,7 @@ export function AdminVendorsList() {
 
   const deleteVendor = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/vendors/${id}`, {
+      const response = await fetch(`${BACKEND_URL}/api/vendors/${id}`, {
         method: "DELETE",
       })
 
@@ -72,7 +74,7 @@ export function AdminVendorsList() {
 
   const approveVendor = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/vendors/${id}/approve`, {
+      const response = await fetch(`${BACKEND_URL}/api/vendors/${id}/approve`, {
         method: "POST",
       })
 
@@ -90,7 +92,7 @@ export function AdminVendorsList() {
 
   const rejectVendor = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/vendors/${id}/reject`, {
+      const response = await fetch(`${BACKEND_URL}/api/vendors/${id}/reject`, {
         method: "POST",
       })
 

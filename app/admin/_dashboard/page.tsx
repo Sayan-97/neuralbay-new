@@ -24,11 +24,12 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("overview")
+  const BACKEND_URL = "http://localhost:3001";
 
   useEffect(() => {
     async function fetchStats() {
       try {
-        const response = await fetch("/api/admin/stats")
+        const response = await fetch(`${BACKEND_URL}/api/stats`)
         if (!response.ok) {
           throw new Error("Failed to fetch admin stats")
         }

@@ -17,28 +17,53 @@ import { MoreHorizontal, Search, Trash2, Edit, UserCog, ShieldCheck, Ban } from 
 import { toast } from "sonner"
 
 interface User {
-  id: string
-  name: string
-  email: string
-  role: string
-  status: string
-  joinedAt: string
-  lastActive: string
+  id: string;
+  principalId: string;
 }
+
+
+// Helper function to include x-user-id in headers
+const authFetch = async (url: string, options: RequestInit = {}) => {
+  const principalId = localStorage.getItem("principalId") ?? "admin-1"
+  const adminPass = localStorage.getItem("admin_pass") ?? ""
+
+  return fetch(url, {
+    ...options,
+    headers: {
+      "x-user-id": principalId,
+      "x-admin-password": adminPass,
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  })
+}
+
+
 
 export function AdminUsersList() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const BACKEND_URL = "http://localhost:3001";
+
 
   useEffect(() => {
-    fetchUsers()
-  }, [])
+    // Dev-mode: inject admin principalId into localStorage
+    const existing = localStorage.getItem("principalId")
+    if (!existing) {
+      localStorage.setItem("principalId", "admin-1")
+    }
+
+    fetchUsers().then(() => {
+      console.log("Loaded users:", users);
+    });
+  }, []);
+  
 
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const response = await fetch("/api/admin/users")
+      const response = await authFetch(`${BACKEND_URL}/api/users`)
       if (!response.ok) {
         throw new Error("Failed to fetch users")
       }
@@ -52,16 +77,18 @@ export function AdminUsersList() {
     }
   }
 
-  const deleteUser = async (id: string) => {
+  const deleteUser = async (id: string, principalId?: string) => {
     try {
-      const response = await fetch(`/api/admin/users/${id}`, {
-        method: "DELETE",
-      })
-
+      const url = principalId
+        ? `${BACKEND_URL}/api/users?principalId=${principalId}`
+        : `${BACKEND_URL}/api/users/${id}`
+  
+      const response = await authFetch(url, { method: "DELETE" })
+  
       if (!response.ok) {
         throw new Error("Failed to delete user")
       }
-
+  
       setUsers(users.filter((user) => user.id !== id))
       toast.success("User deleted successfully")
     } catch (error) {
@@ -69,10 +96,11 @@ export function AdminUsersList() {
       toast.error("Failed to delete user")
     }
   }
+  
 
   const banUser = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/users/${id}/ban`, {
+      const response = await fetch(`${BACKEND_URL}/api/users/${id}/ban`, {
         method: "POST",
       })
 
@@ -90,7 +118,7 @@ export function AdminUsersList() {
 
   const makeAdmin = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/users/${id}/make-admin`, {
+      const response = await fetch(`${BACKEND_URL}/api/admin/users/${id}/make-admin`, {
         method: "POST",
       })
 
@@ -106,12 +134,10 @@ export function AdminUsersList() {
     }
   }
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  const filteredUsers = users.filter((user) =>
+    user.principalId.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
 
   return (
     <div className="space-y-4">
@@ -138,10 +164,7 @@ export function AdminUsersList() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Joined</TableHead>
                 <TableHead>Last Active</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -156,8 +179,7 @@ export function AdminUsersList() {
               ) : (
                 filteredUsers.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell className="font-medium">{user.principalId}</TableCell>
                     <TableCell>
                       <Badge
                         variant={user.role === "Admin" ? "default" : user.role === "Vendor" ? "secondary" : "outline"}
@@ -165,17 +187,8 @@ export function AdminUsersList() {
                         {user.role}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          user.status === "Active" ? "default" : user.status === "Inactive" ? "outline" : "destructive"
-                        }
-                      >
-                        {user.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{user.joinedAt}</TableCell>
-                    <TableCell>{user.lastActive}</TableCell>
+             
+          
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -211,7 +224,7 @@ export function AdminUsersList() {
                           <DropdownMenuItem
                             onClick={() => {
                               if (confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
-                                deleteUser(user.id)
+                                deleteUser(user.id, user.principalId)
                               }
                             }}
                             className="text-red-500 focus:text-red-500"

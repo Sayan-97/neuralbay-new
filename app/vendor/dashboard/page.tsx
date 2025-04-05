@@ -34,21 +34,31 @@ export default function VendorDashboard() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const response = await fetch("/api/vendor/dashboard-stats")
+        const response = await fetch("http://localhost:3001/api/vendor/dashboard-stats", {
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": principal || "", 
+          },
+        });
+  
         if (!response.ok) {
-          throw new Error("Failed to fetch stats")
+          throw new Error("Failed to fetch stats");
         }
-        const data = await response.json()
-        setStats(data)
+  
+        const data = await response.json();
+        setStats(data);
       } catch (error) {
-        console.error("Error fetching stats:", error)
+        console.error("Error fetching stats:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
-
-    fetchStats()
-  }, [])
+  
+    if (principal) {
+      fetchStats();
+    }
+  }, [principal]);
+  
 
   return (
     <div className="container py-8 space-y-4">
@@ -89,8 +99,8 @@ export default function VendorDashboard() {
               <div className="animate-pulse h-8 bg-muted rounded"></div>
             ) : (
               <>
-                <div className="text-2xl font-bold">{stats?.totalRevenue} ICP</div>
-                <p className="text-xs text-muted-foreground">
+<div className="text-2xl font-bold">{stats?.totalRevenue} ICP</div>
+<p className="text-xs text-muted-foreground">
                   {stats?.revenueChange > 0 ? "+" : ""}
                   {stats?.revenueChange}% from last month
                 </p>

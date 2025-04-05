@@ -104,15 +104,18 @@ export default function ModelPageClient({
       return;
     }
 
-    if (!isConnected) {
-      console.log("🔄 Connecting Plug Wallet...");
-      const connected = await connectPlug();
+    console.log("🔄 Checking Plug connection...");
+    let connected = isConnected;
+    
+    if (!connected) {
+      connected = await connectPlug();
       if (!connected) {
         console.error("❌ Plug Wallet connection failed.");
         alert("Plug Wallet connection failed. Please try again.");
         return;
       }
     }
+    
 
     try {
       const recipientWallet = model.wallet_principal_id;
@@ -208,29 +211,75 @@ export default function ModelPageClient({
               <TabsTrigger value="pricing">Pricing</TabsTrigger>
             </TabsList>
             <TabsContent value="details" className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Model Details</h2>
-              <p className="mb-4">
-                Stable Diffusion v1 is a state-of-the-art image generation model
-                that can create high-quality images from textual descriptions.
-                It uses a diffusion-based approach to generate images, resulting
-                in more coherent and detailed outputs compared to previous
-                models.
-              </p>
-              <h3 className="text-lg font-semibold mb-2">Key Features:</h3>
-              <ul className="list-disc list-inside mb-4">
-                <li>High-resolution image generation (up to 1024x1024)</li>
-                <li>Diverse style and content generation</li>
-                <li>Fine control over image attributes</li>
-                <li>Fast inference times</li>
-              </ul>
-              <h3 className="text-lg font-semibold mb-2">Use Cases:</h3>
-              <ul className="list-disc list-inside">
-                <li>Digital art creation</li>
-                <li>Concept art for games and movies</li>
-                <li>Product design visualization</li>
-                <li>Augmented reality content generation</li>
-              </ul>
-            </TabsContent>
+  <h2 className="text-xl font-semibold mb-4">Model Details</h2>
+  
+  {model.category === "image" && (
+    <>
+      <p className="mb-4">
+        This image generation model creates high-quality visuals from text prompts using diffusion techniques.
+      </p>
+      <h3 className="text-lg font-semibold mb-2">Key Features:</h3>
+      <ul className="list-disc list-inside mb-4">
+        <li>High-resolution image generation (up to 1024x1024)</li>
+        <li>Diverse style and content generation</li>
+        <li>Fine control over image attributes</li>
+        <li>Fast inference times</li>
+      </ul>
+      <h3 className="text-lg font-semibold mb-2">Use Cases:</h3>
+      <ul className="list-disc list-inside">
+        <li>Digital art creation</li>
+        <li>Game and film concept art</li>
+        <li>Product design visualization</li>
+        <li>AR content generation</li>
+      </ul>
+    </>
+  )}
+
+  {model.category === "text" && (
+    <>
+      <p className="mb-4">
+        This text generation model produces human-like language outputs based on your prompts using advanced transformer architecture.
+      </p>
+      <h3 className="text-lg font-semibold mb-2">Key Features:</h3>
+      <ul className="list-disc list-inside mb-4">
+        <li>Context-aware text generation</li>
+        <li>Support for summarization, translation, and Q&A</li>
+        <li>High coherence and relevance</li>
+        <li>Multi-language support</li>
+      </ul>
+      <h3 className="text-lg font-semibold mb-2">Use Cases:</h3>
+      <ul className="list-disc list-inside">
+        <li>Chatbots and virtual assistants</li>
+        <li>Content creation</li>
+        <li>Code generation</li>
+        <li>Language translation</li>
+      </ul>
+    </>
+  )}
+
+  {model.category === "audio" && (
+    <>
+      <p className="mb-4">
+        This audio model performs tasks like speech synthesis, enhancement, and transcription with high accuracy.
+      </p>
+      <h3 className="text-lg font-semibold mb-2">Key Features:</h3>
+      <ul className="list-disc list-inside mb-4">
+        <li>Text-to-speech synthesis</li>
+        <li>Speech recognition and transcription</li>
+        <li>Noise reduction and enhancement</li>
+        <li>Emotion-aware speech generation</li>
+      </ul>
+      <h3 className="text-lg font-semibold mb-2">Use Cases:</h3>
+      <ul className="list-disc list-inside">
+        <li>Voice assistants</li>
+        <li>Audio content generation</li>
+        <li>Podcast automation</li>
+        <li>Accessibility applications</li>
+      </ul>
+    </>
+  )}
+</TabsContent>
+
             <TabsContent value="api" className="p-6">
               <h2 className="text-xl font-semibold mb-4">API Documentation</h2>
               <p className="mb-4">API Endpoint: {model.apiEndpoint}</p>

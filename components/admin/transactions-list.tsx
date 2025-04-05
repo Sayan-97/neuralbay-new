@@ -25,6 +25,23 @@ interface Transaction {
   date: string
 }
 
+const BACKEND_URL = "http://localhost:3001"
+
+const adminAuthFetch = async (url: string, options: RequestInit = {}) => {
+  const password = localStorage.getItem("admin_pass") ?? ""
+  const principalId = localStorage.getItem("principalId") ?? "admin-1"
+
+  return fetch(url, {
+    ...options,
+    headers: {
+      "x-admin-password": password,
+      "x-user-id": principalId,
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  })
+}
+
 export function AdminTransactionsList() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,10 +54,8 @@ export function AdminTransactionsList() {
   const fetchTransactions = async () => {
     try {
       setLoading(true)
-      const response = await fetch("/api/admin/transactions")
-      if (!response.ok) {
-        throw new Error("Failed to fetch transactions")
-      }
+      const response = await adminAuthFetch(`${BACKEND_URL}/api/admin/transactions`)
+      if (!response.ok) throw new Error("Failed to fetch transactions")
       const data = await response.json()
       setTransactions(data)
     } catch (error) {
@@ -53,14 +68,10 @@ export function AdminTransactionsList() {
 
   const flagTransaction = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/transactions/${id}/flag`, {
+      const response = await adminAuthFetch(`${BACKEND_URL}/api/admin/transactions/${id}/flag`, {
         method: "POST",
       })
-
-      if (!response.ok) {
-        throw new Error("Failed to flag transaction")
-      }
-
+      if (!response.ok) throw new Error("Failed to flag transaction")
       toast.success("Transaction flagged for review")
     } catch (error) {
       console.error("Error flagging transaction:", error)
@@ -69,11 +80,12 @@ export function AdminTransactionsList() {
   }
 
   const filteredTransactions = transactions.filter(
-    (transaction) =>
-      transaction.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.id.toLowerCase().includes(searchQuery.toLowerCase()),
+    (tx) =>
+      tx.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tx.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tx.id.toLowerCase().includes(searchQuery.toLowerCase()),
   )
+
 
   return (
     <div className="space-y-4">

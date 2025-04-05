@@ -10,7 +10,7 @@ app.use(
   cors({
     origin: "http://localhost:3000", // Allow frontend origin
     methods: "GET,POST,PUT,DELETE", // Allowed HTTP methods
-    allowedHeaders: ["Content-Type", "Authorization", "x-user-id"], // Explicitly allow 'x-user-id'
+    allowedHeaders: ["Content-Type", "Authorization", "x-user-id", "x-admin-password"],
     credentials: true, // If using authentication tokens
   })
 );
@@ -194,6 +194,16 @@ app.route('/api/users/profile')
 // 4) APPLY GLOBAL MIDDLEWARE
 // ------------------------------------------------------------------
 // Apply authentication only to protected routes
+function adminAuth(req, res, next) {
+  const password = req.header("x-admin-password");
+  if (!password || password !== 'neuralbaySuperSecure123') {
+    return res.status(401).json({ error: "Unauthorized Admin Access" });
+  }
+  next();
+}
+
+// Secure all admin routes
+app.use("/api/admin", adminAuth);
 app.use('/api/vendor', authenticate);
 app.use('/api/users', authenticate);
 app.use('/api/billing', authenticate);
@@ -206,18 +216,56 @@ app.use('/api/billing', authenticate);
 /**
  * /api/vendor/dashboard-stats [GET]
  */
-app.get('/api/vendor/dashboard-stats', async (req, res) => {
-  // For demo, return static stats
-  const response = {
-    totalRevenue: 1234,
-    activeUsers: 573,
-    apiCalls: 12234,
-    revenueChange: 20.1,
-    userChange: 201,
-    apiCallsChange: 19
-  };
-  res.json(response);
+app.get('/api/vendor/dashboard-stats', authenticate, async (req, res) => {
+  try {
+    // 1. Find all vendor models by this user
+    const vendorModels = await VendorModel.find({ userId: req.userId });
+
+    // 2. Get matching marketplace model IDs using name + wallet_principal_id
+    const matchConditions = vendorModels.map(vm => ({
+      name: vm.name,
+      wallet_principal_id: vm.wallet_principal_id
+    }));
+
+    const matchingMarketplaceModels = await MarketplaceModel.find({
+      $or: matchConditions
+    });
+
+    const modelIds = matchingMarketplaceModels.map(m => m._id.toString());
+
+    // 3. Aggregate revenue for those modelIds
+    const revenueAgg = await Transaction.aggregate([
+      {
+        $match: {
+          type: "purchase",
+          modelId: { $in: modelIds }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: "$amount" }
+        }
+      }
+    ]);
+
+    const totalRevenue = revenueAgg[0]?.totalRevenue || 0;
+
+    res.json({
+      totalRevenue,
+      activeUsers: 5,
+      apiCalls: 50,
+      revenueChange: 10.2,
+      userChange: 1,
+      apiCallsChange: 5.1
+    });
+
+  } catch (error) {
+    console.error("❌ Error in /api/vendor/dashboard-stats:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
+
 
 /**
  * /api/vendor/models [GET, POST]
@@ -761,24 +809,23 @@ app.post('/api/billing/deposit', async (req, res) => {
  * ✅ Fetch Users (by `principalId`)
  */
 app.get('/api/users', async (req, res) => {
-  const { principalId } = req.query;
-
   try {
-    if (principalId) {
-      const user = await User.findOne({ principalId });
-      return user
-        ? res.json(user)
-        : res.status(404).json({ error: 'User not found' });
-    }
+    const users = await User.find({});
     
-    const allUsers = await User.find({});
-    res.json(allUsers);
+    const enriched = users.map((user) => ({
+      id: user._id.toString(),           // ✅ expose _id as id
+      principalId: user.principalId,
+      role: "Vendor",                    // optional default
+      status: "Active",                  // optional default
+    }));
 
+    res.json(enriched);
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 
 /**
  * ✅ Register User (with `principalId`)
@@ -857,6 +904,37 @@ app.delete('/api/users', async (req, res) => {
   }
 });
 
+
+app.get('/api/stats', async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments({});
+    const totalVendors = await VendorModel.distinct("wallet_principal_id").then(vendors => vendors.length);
+    const totalModels = await MarketplaceModel.countDocuments({});
+    const totalRevenueAgg = await Transaction.aggregate([
+      { $match: { type: "purchase" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+
+    const totalRevenue = totalRevenueAgg[0]?.total || 0;
+
+    res.json({
+      totalUsers,
+      totalVendors,
+      totalModels,
+      totalRevenue,
+      activeUsers: 12, // optional dummy
+      pendingApprovals: 3, // optional dummy
+      growthRate: 17.8, // optional dummy
+    });
+  } catch (error) {
+    console.error("❌ Error fetching stats:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
+
 /**
  * /api/stores [GET, POST, PUT, DELETE]
  * Query param: ?id=...
@@ -926,6 +1004,110 @@ app.delete('/api/stores', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+
+// ------------------------------------------------------------------
+// 11) ADMIN API ENDPOINTS
+// ------------------------------------------------------------------
+
+app.get('/api/admin/models', authenticate, async (req, res) => {
+  try {
+    const models = await VendorModel.find({});
+
+    const enriched = models.map((model) => ({
+      id: model._id,
+      name: model.name,
+      vendor: model.wallet_principal_id,
+      category: model.category,
+      status: model.status,
+      price: model.price,
+      createdAt: model._id.getTimestamp().toISOString(), // crude timestamp
+    }));
+
+    res.json(enriched);
+  } catch (error) {
+    console.error("❌ Failed to fetch admin models:", error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.delete('/api/admin/models/:id', authenticate, async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid model ID format" });
+    }
+
+    const deletedModel = await VendorModel.findByIdAndDelete(id);
+    if (!deletedModel) {
+      return res.status(404).json({ error: "Model not found" });
+    }
+
+    if (deletedModel.name && deletedModel.wallet_principal_id) {
+      await MarketplaceModel.findOneAndDelete({
+        name: deletedModel.name,
+        wallet_principal_id: deletedModel.wallet_principal_id,
+      });
+    }
+
+    res.json({ message: "Model deleted successfully" });
+  } catch (error) {
+    console.error("❌ Error deleting model:", error.stack || error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE user by Mongo _id (for admin panel)
+app.delete('/api/users/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid user ID format' });
+    }
+
+    const deletedUser = await User.findByIdAndDelete(id);
+    if (!deletedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error("❌ Error deleting user:", error.stack || error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+app.get('/api/admin/transactions', async (req, res) => {
+  try {
+    const transactions = await Transaction.find({});
+
+    const enriched = await Promise.all(
+      transactions.map(async (tx) => {
+        const user = await User.findOne({ principalId: tx.userId });
+        const model = await MarketplaceModel.findById(tx.modelId);
+
+        return {
+          id: tx._id.toString(),
+          type: tx.type,
+          amount: tx.amount.toFixed(3),
+          status: "Completed", // Optionally change this based on logic
+          user: user?.principalId || "Unknown",
+          model: model?.name || "Unknown",
+          date: tx._id.getTimestamp().toISOString(),
+        };
+      })
+    );
+
+    res.json(enriched);
+  } catch (error) {
+    console.error("❌ Failed to fetch admin transactions:", error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
 
 // ------------------------------------------------------------------
 // 10) START THE SERVER

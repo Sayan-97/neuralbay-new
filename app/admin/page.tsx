@@ -9,6 +9,8 @@ import { AdminTransactionsList } from "@/components/admin/transactions-list"
 import { Button } from "@/components/ui/button"
 import { BarChart, Users, ShoppingBag, CreditCard, AlertTriangle, Activity, TrendingUp } from "lucide-react"
 import { motion } from "framer-motion"
+import { Input } from "@/components/ui/input"
+import { toast } from "react-hot-toast"
 
 interface AdminStats {
   totalUsers: number
@@ -21,22 +23,50 @@ interface AdminStats {
 }
 
 export default function AdminDashboard() {
-  
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("overview")
+  const [password, setPassword] = useState("")
+  const [authenticated, setAuthenticated] = useState(false)
+
+  const BACKEND_URL = "http://localhost:3001"
+
+  const handlePasswordSubmit = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/stats`, {
+        headers: { "x-admin-password": password },
+      })
+
+      if (!response.ok) throw new Error("Invalid password or unauthorized")
+
+      localStorage.setItem("admin_pass", password)
+      setAuthenticated(true)
+    } catch (error: any) {
+      toast.error(error.message || "Unauthorized")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function fetchStats() {
+    const stored = localStorage.getItem("admin_pass")
+    if (!stored) return
+
+    const fetchStats = async () => {
       try {
-        const response = await fetch("/api/admin/stats")
-        if (!response.ok) {
-          throw new Error("Failed to fetch admin stats")
-        }
+        const response = await fetch(`${BACKEND_URL}/api/stats`, {
+          headers: { "x-admin-password": stored },
+        })
+
+        if (!response.ok) throw new Error("Unauthorized")
+
         const data = await response.json()
         setStats(data)
-      } catch (error) {
-        console.error("Error fetching admin stats:", error)
+        setAuthenticated(true)
+      } catch (err) {
+        console.error(err)
+        toast.error("Authentication failed")
       } finally {
         setLoading(false)
       }
@@ -44,6 +74,26 @@ export default function AdminDashboard() {
 
     fetchStats()
   }, [])
+
+  // ✅ Always render same number of hooks, wrap UI conditionally
+  if (!authenticated) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen space-y-4">
+        <h2 className="text-2xl font-semibold">Enter Admin Password</h2>
+        <Input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Admin Password"
+          className="w-[300px]"
+        />
+        <Button onClick={handlePasswordSubmit} disabled={loading}>
+          {loading ? "Authenticating..." : "Access Dashboard"}
+        </Button>
+      </div>
+    )
+  }
+
 
   return (
     <div className="container py-8 space-y-6">
