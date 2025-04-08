@@ -1,38 +1,40 @@
 "use client";
 
-import { useContext, useState, useEffect } from "react";
+import { useIdentityKit } from "@/hooks/useIdentityKit";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { AuthContext } from "@/context/AuthContext";
+import { useEffect } from "react";
+import { useBalance } from "@nfid/identitykit/react";
 
 export function LoginButton() {
-  const authContext = useContext(AuthContext);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { isConnected, principalId, login, logout } = useIdentityKit();
+  const { balance, fetchBalance } = useBalance();
 
+  // Call fetchBalance() once user is connected
   useEffect(() => {
-    if (authContext?.principal) {
-      setIsLoggedIn(true);
-    } else {
-      setIsLoggedIn(false);
-    }
-  }, [authContext?.principal]);
-
+    if (isConnected) fetchBalance?.();
+  }, [isConnected]);
+  
+  console.log("💰 Balance:", balance, "ICP");
   const handleLogin = async () => {
-    if (authContext?.login) {
-      await authContext.login();
-    }
+    await login?.();
   };
 
   const handleLogout = async () => {
-    if (authContext?.logout) {
-      await authContext.logout();
-    }
+    await logout?.();
     toast.success("Logged out successfully!");
   };
 
   return (
-    <Button onClick={isLoggedIn ? handleLogout : handleLogin}>
-      {isLoggedIn ? "Logout" : "Login"}
-    </Button>
+    <div className="flex items-center gap-4">
+      {isConnected && principalId && (
+        <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+          {principalId}
+        </span>
+      )}
+      <Button onClick={isConnected ? handleLogout : handleLogin}>
+        {isConnected ? "Logout" : "Connect Wallet"}
+      </Button>
+    </div>
   );
 }

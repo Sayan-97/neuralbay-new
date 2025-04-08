@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Star, Download, Share2 } from "lucide-react";
 import Image from "next/image";
 import { useContext, useEffect, useState } from "react";
-import { usePlug } from "@/hooks/usePlug";
+import { useIdentityKit } from "@/hooks/useIdentityKit";
 import { AuthContext } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 
@@ -45,7 +45,7 @@ export default function ModelPageClient({
   params,
 }: ModelPageClientProps) {
   const [model] = useState<ModelData>(initialData);
-  const { isConnected, connectPlug, requestTransfer } = usePlug();
+  const { isConnected,requestTransfer } = useIdentityKit();
   const authContext = useContext(AuthContext);
   const [purchased, setPurchased] = useState<boolean>(false);
   const router = useRouter();
@@ -96,49 +96,35 @@ export default function ModelPageClient({
       router.push("/login");
       return;
     }
-
+  
     if (!model || !model._id) {
       console.error("❌ Model ID is missing!", model);
       alert("Error: Model ID is missing.");
       return;
     }
-
+  
     if (!model.wallet_principal_id) {
       console.error("❌ Recipient wallet address is missing.");
       alert("Error: No recipient wallet address found for this model.");
       return;
     }
-
-    console.log("🔄 Checking Plug connection...");
-    let connected = isConnected;
-    
-    if (!connected) {
-      connected = await connectPlug();
-      if (!connected) {
-        console.error("❌ Plug Wallet connection failed.");
-        alert("Plug Wallet connection failed. Please try again.");
-        return;
-      }
-    }
-    
-
+  
     try {
       const recipientWallet = model.wallet_principal_id;
       const amountICP = Number.parseFloat(model.price || "0");
-
+  
       console.log(`🔄 Transferring ${amountICP} ICP to ${recipientWallet}`);
-
+  
       const response = await requestTransfer(recipientWallet, amountICP);
-
-      if (!response?.height) {
+  
+      if (!response) {
         console.warn("⚠️ Transaction canceled or failed.");
         alert("Transaction was canceled or failed. Please try again.");
         return;
       }
-
+  
       console.log("✅ Transaction successful:", response);
-
-      // ✅ Save purchase in the database
+  
       const modelResponse = await fetch(
         `http://localhost:3001/api/marketplace/models/${model._id}/purchase`,
         {
@@ -149,23 +135,23 @@ export default function ModelPageClient({
           },
         }
       );
-
+  
       if (!modelResponse.ok) {
         console.error(`❌ Error recording purchase: ${modelResponse.status}`);
         alert(`Error: ${modelResponse.statusText}`);
         return;
       }
-
+  
       console.log("✅ Purchase recorded in database");
       alert("✅ Purchase successful!");
-
-      // ✅ Immediately update UI
-      setPurchased(true); // Ensures button changes to "Purchased"
+  
+      setPurchased(true);
     } catch (error) {
       console.error("❌ Transaction error:", error);
       alert("Transaction failed. Please try again.");
     }
   };
+  
 
   console.log("authContext.principal", `"${authContext.principal}"`);
 console.log("model.wallet_principal_id", `"${model.wallet_principal_id}"`);

@@ -6,6 +6,8 @@ import { Footer } from "@/components/footer";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/context/AuthContext";
+import { IdentityKitProvider } from "@nfid/identitykit/react";
+import "@nfid/identitykit/react/styles.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,6 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} dark`}>
+      <IdentityKitProvider>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -37,6 +40,7 @@ export default function RootLayout({
           </AuthProvider>
           <Toaster />
         </ThemeProvider>
+        </IdentityKitProvider>
       </body>
     </html>
   );
