@@ -1,8 +1,0 @@
-service : {
-  addModel: (text, text, text) -> (text);
-  getModels: () -> (vec record {
-                          text;
-                          text;
-                          text;
-                        });
-}

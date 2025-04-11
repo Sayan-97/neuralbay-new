@@ -1,0 +1,26 @@
+type Model = 
+ record {
+   apiEndpoint: text;
+   category: text;
+   created_at: nat;
+   description: text;
+   image: text;
+   name: text;
+   price: text;
+   size_bytes: nat;
+   uploader: principal;
+   wallet_principal_id: principal;
+ };
+service : {
+  confirmPayment: (nat) -> (text);
+  deleteModel: (nat, nat) -> (text);
+  getAllConfirmedPayments: () -> (vec record {
+                                        principal;
+                                        nat;
+                                      }) query;
+  getBrokerCycleBalance: () -> (nat) query;
+  getModelsByUploaderFromStorage: (principal) -> (vec Model);
+  hasPayment: (principal) -> (bool) query;
+  storeModel: (text, text, text, text, text, text, text, nat, text) -> (text);
+  updateModel: (nat, nat, text, text, text, text, text, text) -> (text);
+}

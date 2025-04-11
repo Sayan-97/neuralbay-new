@@ -18,6 +18,9 @@ import { useContext } from "react";
 import { AuthContext } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { HttpAgent, Actor } from "@dfinity/agent";
+import { idlFactory as modelStorageIDL } from "../declarations/model_storage"; // adjust to your project
+
 
 // ✅ Define the expected model structure
 interface Model {
@@ -49,34 +52,40 @@ export function ModelGrid({
 
   const fetchModels = async () => {
     try {
-      const response = await fetch("http://localhost:3001/api/marketplace/models");
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch models");
-      }
-
-      const fetchedModels: Model[] = await response.json();
-
-      // ✅ Ensure all models have necessary fields with defaults
-      const processedModels = fetchedModels.map((model) => ({
-        _id: model._id || crypto.randomUUID(),
-        name: model.name || "Untitled Model",
-        description: model.description || "No description provided.",
-        category: model.category || "Uncategorized",
-        price: model.price || "N/A",
+      const agent = new HttpAgent({ host: "https://icp-api.io" });
+      await agent.fetchRootKey();
+  
+      const modelStorage = Actor.createActor(
+        // Import your IDL correctly here:
+        require("@/declarations/model_storage").idlFactory,
+        {
+          agent,
+          canisterId: "c7sly-xiaaa-aaaal-qsmca-cai", // your model_storage canister ID
+        }
+      );
+  
+      const result = await modelStorage.getModels();
+  
+      const processedModels: Model[] = result.map((model: any, index: number) => ({
+        _id: `model-${index}`,
+        name: model.name,
+        description: model.description,
+        category: model.category,
+        price: model.price,
         image: model.image || "https://via.placeholder.com/400x300",
         rating: "4.2k",
         type: "Subscription",
       }));
-
+  
       setModels(processedModels);
     } catch (error) {
-      console.error("Error fetching models:", error);
+      console.error("❌ Error fetching models from canister:", error);
       toast.error("Failed to fetch models.");
     } finally {
       setLoading(false);
     }
   };
+  
 
   const handleCardClick = async (modelId: string) => {
     if (!authContext || !authContext.principal) {

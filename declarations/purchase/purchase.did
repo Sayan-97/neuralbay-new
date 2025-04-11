@@ -1,0 +1,14 @@
+type Time = int;
+type Purchase = 
+ record {
+   buyer: principal;
+   modelId: text;
+   timestamp: Time;
+ };
+service : {
+  countPurchases: () -> (nat) query;
+  getAllPurchases: () -> (vec Purchase) query;
+  getPurchasesByUser: (principal) -> (vec Purchase) query;
+  hasUserPurchasedModel: (principal, text) -> (bool) query;
+  recordPurchase: (principal, text) -> (text);
+}

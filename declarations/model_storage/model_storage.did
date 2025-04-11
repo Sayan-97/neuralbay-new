@@ -1,0 +1,24 @@
+type Time = int;
+type Model = 
+ record {
+   apiEndpoint: text;
+   category: text;
+   created_at: Time;
+   description: text;
+   image: text;
+   name: text;
+   price: text;
+   size_bytes: nat;
+   uploader: principal;
+   wallet_principal_id: principal;
+ };
+service : {
+  addModel: (text, text, text, text, text, text, text, nat, text) -> (text);
+  deleteModel: (nat) -> (text);
+  getCycleBalance: () -> (nat) query;
+  getModel: (nat) -> (opt Model) query;
+  getModels: () -> (vec Model) query;
+  getModelsByUploader: (principal) -> (vec Model) query;
+  getRequiredCycles: (nat) -> (nat) query;
+  updateModel: (nat, text, text, text, text, text, text) -> (text);
+}

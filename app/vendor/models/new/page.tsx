@@ -9,18 +9,23 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { AuthContext } from "../../../../context/AuthContext";
-import { useIdentityKit } from "@/hooks/useIdentityKit"; // Import Plug Wallet hook
-import { Actor, HttpAgent } from "@dfinity/agent";
-import { idlFactory } from "../../../../declarations/custom_greeting_backend";
+import { useIdentityKit } from "@/hooks/useIdentityKit";
+import { HttpAgent, Actor } from "@dfinity/agent";
+import { idlFactory as brokerIDL } from "../../../../declarations/broker";
+
+const BROKER_CANISTER_ID = "ckv2v-waaaa-aaaal-qsmbq-cai"; 
+
+declare global {
+  interface Window {
+    ic: any;
+  }
+}
 
 export default function PublishNewModelPage() {
   const router = useRouter();
-  const { principal } = useContext(AuthContext) || {};  
-  const { principalId } = useIdentityKit(); // Get principal ID from Plug Wallet
+  const { principal } = useContext(AuthContext) || {};
   const [isLoading, setIsLoading] = useState(false);
-const canisterId = "ezvoz-kqaaa-aaaal-qnbpq-cai";
-  const agent = new HttpAgent({ host: "https://ic0.app" });
-  const backendActor = Actor.createActor(idlFactory, { agent, canisterId }); 
+  const { principalId, requestTransfer, isReady, login } = useIdentityKit();
 
 
   const [modelData, setModelData] = useState({
@@ -30,90 +35,103 @@ const canisterId = "ezvoz-kqaaa-aaaal-qnbpq-cai";
     price: "",
     apiEndpoint: "",
     image: "",
-    wallet_principal_id: principalId || "", // Auto-fill if Plug Wallet is connected
+    wallet_principal_id: "",
   });
 
   useEffect(() => {
-    if (!principal) {
-      router.push("/login");
-    }
-  }, [principal]);
-
-  useEffect(() => {
     if (principalId) {
-      setModelData((prev) => ({ ...prev, wallet_principal_id: principalId }));
+      setModelData((prev) => ({
+        ...prev,
+        wallet_principal_id: principalId,
+      }));
     }
   }, [principalId]);
 
-  const handleInputChange = (e: { target: { name: any; value: any } }) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setModelData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (value: any) => {
+  const handleSelectChange = (value: string) => {
     setModelData((prev) => ({ ...prev, category: value }));
   };
 
-  const handleSubmit = async (e: { preventDefault: () => void }) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-
-    if (!principal) {
-      router.push("/login");
+  
+    if (!principalId || !isReady) {
+      toast.error("🔒 Wallet not connected or still initializing.");
       return;
     }
-
-    if (!modelData.wallet_principal_id) {
-      toast.error("❌ Please enter a valid Principal ID for receiving payments.");
-      setIsLoading(false);
-      return;
-    }
-
+  
     try {
-      const response = await fetch("http://localhost:3001/api/vendor/models", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": principal,
-        },
-        body: JSON.stringify({
-          name: modelData.name,
-          description: modelData.description,
-          category: modelData.category,
-          price: modelData.price,
-          apiEndpoint: modelData.apiEndpoint,
-          image: modelData.image || "https://picsum.photos/seed/model4/400/300",
-          wallet_principal_id: modelData.wallet_principal_id, // ✅ Include wallet principal ID
-        }),
+      const payloadSize = new Blob([JSON.stringify(modelData)]).size;
+  
+      // Calculate required cycles and ICP
+      const cyclesPerByte = 200_000;
+      const requiredCycles = payloadSize * cyclesPerByte;
+      const icpE8s = Math.ceil(requiredCycles / 10_000); // cycles / 10,000 = e8s
+      const icpAmount = icpE8s / 100_000_000;
+  
+      console.log("📦 Payload size:", payloadSize, "bytes");
+      console.log("💰 Required cycles:", requiredCycles);
+      console.log("🧮 Required ICP (e8s):", icpE8s);
+      console.log("💸 Decimal ICP:", icpAmount);
+  
+      // ✅ Setup broker actor
+      const agent = new HttpAgent({ host: "https://icp-api.io" });
+      const broker = Actor.createActor(brokerIDL, {
+        agent,
+        canisterId: BROKER_CANISTER_ID,
       });
+  
+      // ✅ Check for existing pending payment
+      const pendingPayments = await broker.getAllConfirmedPayments() as Array<[string, bigint]>;
 
-      if (!response.ok) {
-        throw new Error("Failed to publish model");
-      }
-
-      const result = await response.json();
-      console.log("Model published to API:", result);
-
-     // Upload to backend canister
-      const canisterResponse = await backendActor.addModel(
-        modelData.name,
-        modelData.apiEndpoint,
-        modelData.wallet_principal_id // ✅ Store the wallet principal ID in ICP backend
+      const hasPending = pendingPayments.find(
+        ([payer]: [string, bigint]) => payer.toString() === principalId
       );
-
-      console.log("Canister response:", canisterResponse);
-
-    
+  
+      if (!hasPending) {
+        // ✅ Send ICP using IdentityKit (Ledger)
+        const transferResult = await requestTransfer(BROKER_CANISTER_ID, icpAmount);
+        if (typeof transferResult !== "bigint") {
+          toast.error("Transfer failed. Please try again.");
+          return;
+        }
+        
+        // ✅ Confirm payment in broker canister
+        const confirm = await broker.confirmPayment(BigInt(icpE8s));
+        console.log("✅ Payment confirmed:", confirm);
+      } else {
+        toast("💡 You already paid for this model. Resuming publish...");
+      }
+  
+      // ✅ Store model
+      const result = await broker.storeModel(
+        modelData.name,
+        modelData.description,
+        modelData.category,
+        modelData.price,
+        modelData.apiEndpoint,
+        modelData.image,
+        modelData.wallet_principal_id,
+        BigInt(payloadSize),
+        principalId
+      );
+  
+      console.log("🚀 Model stored:", result);
       toast.success("✅ Model published successfully!");
-
       router.push("/vendor/dashboard");
     } catch (error) {
       console.error("❌ Error publishing model:", error);
-      toast.error("Failed to publish model. Please try again.");
+      toast.error("Something went wrong during model publishing.");
     } finally {
       setIsLoading(false);
     }
   };
+  
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="container mx-auto px-4 py-8">
@@ -148,36 +166,18 @@ const canisterId = "ezvoz-kqaaa-aaaal-qnbpq-cai";
         </div>
         <div>
           <label htmlFor="wallet_principal_id" className="block text-sm font-medium mb-1">Wallet Principal ID</label>
-          <Input
-            id="wallet_principal_id"
-            name="wallet_principal_id"
-            value={modelData.wallet_principal_id}
-            onChange={handleInputChange}
-            required
-            placeholder="Enter Principal ID"
-          />
+          <Input id="wallet_principal_id" name="wallet_principal_id" value={modelData.wallet_principal_id} onChange={handleInputChange} required />
         </div>
-        
         <div>
-          <label htmlFor="image" className="block text-sm font-medium mb-1">Model Image URL (Optional)</label>
-          <Input
-            id="image"
-            name="image"
-            value={modelData.image}
-            onChange={handleInputChange}
-            placeholder="Enter image URL or leave empty for default"
-          />
+          <label htmlFor="image" className="block text-sm font-medium mb-1">Model Image URL</label>
+          <Input id="image" name="image" value={modelData.image} onChange={handleInputChange} />
         </div>
         <div>
           <label htmlFor="apiEndpoint" className="block text-sm font-medium mb-1">API Endpoint</label>
           <Input id="apiEndpoint" name="apiEndpoint" value={modelData.apiEndpoint} onChange={handleInputChange} required />
         </div>
-        <Button type="submit" className="w-full">
-          {isLoading ? "Publishing..." : "Publish Model"}
-        </Button>
+        <Button type="submit" className="w-full">{isLoading ? "Publishing..." : "Publish Model"}</Button>
       </motion.form>
     </motion.div>
   );
 }
-
-

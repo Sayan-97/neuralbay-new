@@ -19,12 +19,15 @@ export default function LoginButton() {
   }, [authContext?.principal]);
 
 
-  const handleLogin = async () => {
-    if (authContext?.login) {
-      await authContext.login();
-    }
-  };
-
+    const handleLogin = async () => {
+      if (authContext?.login && authContext.isReady) {
+        await authContext.login();
+      } else {
+        toast.error("IdentityKit is still initializing...");
+      }
+    };
+    
+ 
   const handleLogout = async () => {
     if (authContext?.logout) {
       await authContext.logout();
@@ -52,9 +55,14 @@ export default function LoginButton() {
 
   return (
     <div className="flex items-center justify-center h-screen w-full">
-    <Button onClick={isLoggedIn ? handleLogout : handleLogin} className="text-lg px-6 py-3">
-      {isLoggedIn ? "Logout" : "Please Login with Dfinity"}
-    </Button>
+<Button
+  onClick={isLoggedIn ? handleLogout : handleLogin}
+  disabled={!authContext?.isReady}
+  className="text-lg px-6 py-3"
+>
+  {isLoggedIn ? "Logout" : authContext?.isReady ? "Please Login with Dfinity" : "Loading..."}
+</Button>
+
   </div>
   );
 }

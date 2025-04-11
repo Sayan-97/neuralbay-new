@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { useBalance } from "@nfid/identitykit/react";
 
 export function LoginButton() {
-  const { isConnected, principalId, login, logout } = useIdentityKit();
+  const { isConnected, principalId, login, logout, isReady } = useIdentityKit();
   const { balance, fetchBalance } = useBalance();
 
   // Call fetchBalance() once user is connected
@@ -16,9 +16,15 @@ export function LoginButton() {
   }, [isConnected]);
   
   console.log("💰 Balance:", balance, "ICP");
+
   const handleLogin = async () => {
-    await login?.();
+    if (!isReady) {
+      toast.error("Please wait... IdentityKit is initializing.");
+      return;
+    }
+    await login();
   };
+  
 
   const handleLogout = async () => {
     await logout?.();
@@ -32,9 +38,10 @@ export function LoginButton() {
           {principalId}
         </span>
       )}
-      <Button onClick={isConnected ? handleLogout : handleLogin}>
-        {isConnected ? "Logout" : "Connect Wallet"}
-      </Button>
+     <Button onClick={isConnected ? handleLogout : handleLogin} disabled={!isReady}>
+  {isConnected ? "Logout" : isReady ? "Connect Wallet" : "Initializing..."}
+</Button>
+
     </div>
   );
 }
